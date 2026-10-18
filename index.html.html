@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infinite Survival - 3D Anime RPG</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- OrbitControls -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&display=swap');
+    
+    * {
+      user-select: none;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    h1, h2, h3, .font-title {
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.8);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3b82f6;
+      border-radius: 4px;
+    }
+
+    .glow-blue {
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+    }
+    .glow-gold {
+      box-shadow: 0 0 20px rgba(234, 179, 8, 0.6);
+    }
+    .text-glow-gold {
+      text-shadow: 0 0 10px rgba(234, 179, 8, 0.8);
+    }
+    .text-glow-cyan {
+      text-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
+    }
+
+    /* UI Glassmorphism */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Crosshair */
+    .crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+    .crosshair::before, .crosshair::after {
+      content: '';
+      position: absolute;
+      background: rgba(56, 189, 248, 0.8);
+    }
+    .crosshair::before { top: 4px; left: -8px; width: 26px; height: 2px; }
+    .crosshair::after { top: -8px; left: 4px; width: 2px; height: 26px; }
+
+    /* Damage Floating Text Animation */
+    @keyframes floatUp {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-40px) scale(1.3); }
+    }
+    .dmg-popup {
+      position: absolute;
+      animation: floatUp 0.8s ease-out forwards;
+      font-weight: 900;
+      font-family: 'Orbitron', sans-serif;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-white overflow-hidden select-none">
+
+  <!-- ==================== 1. LOGIN / CREATION SCREEN ==================== -->
+  <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950 bg-opacity-95 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900 via-slate-950 to-black p-4">
+    <div class="glass-panel w-full max-w-md p-8 rounded-2xl shadow-2xl border border-cyan-500/30">
+      <div class="text-center mb-6">
+        <h1 class="text-4xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 uppercase">
+          Infinite Survival
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">Lv 1 - 800 Titan & Beast Domain</p>
+      </div>
+
+      <form id="login-form" class="space-y-4" onsubmit="event.preventDefault(); startGame();">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Username</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3 top-3 text-slate-500"></i>
+            <input type="text" id="input-username" required placeholder="Warrior Name" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg py-2 pl-10 pr-3 text-sm focus:outline-none focus:border-cyan-500 text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Email</label>
+          <div class="relative">
+            <i class="fa-solid fa-envelope absolute left-3 top-3 text-slate-500"></i>
+            <input type="email" id="input-email" required placeholder="warrior@realm.com" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg py-2 pl-10 pr-3 text-sm focus:outline-none focus:border-cyan-500 text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Password</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-3 text-slate-500"></i>
+            <input type="password" id="input-password" required placeholder="••••••••" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg py-2 pl-10 pr-3 text-sm focus:outline-none focus:border-cyan-500 text-white">
+          </div>
+        </div>
+
+        <!-- Gender Selection (Locked per rules once set) -->
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-300 mb-1">Gender (Permanent Lock)</label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" id="gender-male-btn" onclick="selectGender('Male')" class="gender-btn py-2.5 rounded-lg border border-cyan-500 bg-cyan-500/20 text-cyan-300 font-bold flex items-center justify-center gap-2">
+              <i class="fa-solid fa-mars"></i> Male
+            </button>
+            <button type="button" id="gender-female-btn" onclick="selectGender('Female')" class="gender-btn py-2.5 rounded-lg border border-slate-700 bg-slate-900/50 text-slate-400 font-bold flex items-center justify-center gap-2">
+              <i class="fa-solid fa-venus"></i> Female
+            </button>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-cyan-950/40 border border-cyan-800/40 text-xs text-cyan-200">
+          <i class="fa-solid fa-gift text-cyan-400 mr-1"></i> New warriors spawn with a <b>Starter Sword</b> and <b>1,000 Tokens</b>.
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black text-base rounded-xl shadow-lg transition-all transform hover:scale-[1.02]">
+          ENTER REALM <i class="fa-solid fa-dragon ml-2"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 2. MAIN HUD & GAMEPLAY INTERFACE ==================== -->
+  <div id="game-ui" class="hidden relative w-full h-screen overflow-hidden">
+    
+    <!-- 3D Canvas Target -->
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <!-- Aiming Crosshair -->
+    <div class="crosshair"></div>
+
+    <!-- TOP BAR: PLAYER STATUS & CURRENCY -->
+    <div class="absolute top-4 left-4 right-4 z-10 flex flex-wrap justify-between items-start pointer-events-none gap-4">
+      
+      <!-- Player Profile Card -->
+      <div class="glass-panel p-3.5 rounded-2xl flex items-center gap-4 border border-cyan-500/30 pointer-events-auto min-w-[280px]">
+        <div class="relative">
+          <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-cyan-600 to-purple-600 p-0.5 shadow-lg">
+            <div id="player-avatar" class="w-full h-full rounded-full bg-slate-900 flex items-center justify-center font-black text-xl text-cyan-400">
+              M
+            </div>
+          </div>
+          <span id="rank-badge" class="absolute -bottom-1 -right-1 text-[10px] bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded-full font-black uppercase shadow">
+            Intermediate
+          </span>
+        </div>
+
+        <div class="flex-1">
+          <div class="flex items-center justify-between">
+            <span id="hud-username" class="font-bold text-white text-base">Warrior</span>
+            <span id="hud-level" class="text-xs font-black text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+              Lv 1 / 800
+            </span>
+          </div>
+
+          <!-- HP Bar -->
+          <div class="w-full bg-slate-800 h-2.5 rounded-full mt-1.5 overflow-hidden border border-slate-700">
+            <div id="hp-bar-fill" class="bg-gradient-to-r from-red-500 to-emerald-400 h-full w-full transition-all duration-200"></div>
+          </div>
+          
+          <!-- Ki/Energy Bar -->
+          <div class="w-full bg-slate-800 h-2 rounded-full mt-1 overflow-hidden border border-slate-700">
+            <div id="ki-bar-fill" class="bg-gradient-to-r from-cyan-500 to-blue-400 h-full w-full transition-all duration-200"></div>
+          </div>
+
+          <!-- Active Form Indicator -->
+          <div id="active-form-indicator" class="text-[11px] font-bold text-amber-400 mt-1 flex items-center justify-between">
+            <span>Form: <span id="form-name-text">Base Form</span></span>
+            <span id="gender-indicator-badge" class="text-[10px] text-slate-400">Male</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Beast Timer & Fusion Banner (Center Top) -->
+      <div id="beast-status-card" class="hidden glass-panel px-4 py-2.5 rounded-2xl border border-red-500/50 flex flex-col items-center pointer-events-auto">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-paw text-red-400 animate-pulse"></i>
+          <span id="active-beast-name" class="font-black text-sm text-red-300">Kurama (Nine-Tails)</span>
+        </div>
+        <div class="w-48 bg-slate-800 h-2 rounded-full mt-1 overflow-hidden border border-red-900">
+          <div id="beast-timer-fill" class="bg-gradient-to-r from-red-600 to-amber-500 h-full w-full"></div>
+        </div>
+        <span class="text-[10px] text-red-400 mt-0.5">WARNING: Erasure on Timer Expiration</span>
+      </div>
+
+      <!-- Currencies & Quick Action Buttons -->
+      <div class="flex items-center gap-3 pointer-events-auto">
+        <div class="glass-panel px-3 py-2 rounded-xl flex items-center gap-2 border border-amber-500/30">
+          <i class="fa-solid fa-coins text-amber-400 text-lg"></i>
+          <div>
+            <div class="text-[10px] text-slate-400 uppercase font-bold leading-none">Tokens</div>
+            <div id="token-display" class="font-black text-amber-300 text-sm">1,000</div>
+          </div>
+        </div>
+
+        <div class="glass-panel px-3 py-2 rounded-xl flex items-center gap-2 border border-purple-500/30">
+          <i class="fa-solid fa-gem text-purple-400 text-lg"></i>
+          <div>
+            <div class="text-[10px] text-slate-400 uppercase font-bold leading-none">Infinites</div>
+            <div id="infinix-display" class="font-black text-purple-300 text-sm">50</div>
+          </div>
+        </div>
+
+        <!-- System Menu Triggers -->
+        <button onclick="toggleModal('shop-modal')" class="glass-panel hover:bg-slate-800 text-cyan-400 p-2.5 rounded-xl border border-cyan-500/30 font-bold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-store"></i> <span class="hidden sm:inline text-xs">Shop</span>
+        </button>
+
+        <button onclick="toggleModal('forms-modal')" class="glass-panel hover:bg-slate-800 text-amber-400 p-2.5 rounded-xl border border-amber-500/30 font-bold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-bolt"></i> <span class="hidden sm:inline text-xs">25 Forms</span>
+        </button>
+
+        <button onclick="toggleModal('trade-modal')" class="glass-panel hover:bg-slate-800 text-emerald-400 p-2.5 rounded-xl border border-emerald-500/30 font-bold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-handshake"></i> <span class="hidden sm:inline text-xs">Trade</span>
+        </button>
+
+        <button onclick="toggleModal('leaderboard-modal')" class="glass-panel hover:bg-slate-800 text-yellow-400 p-2.5 rounded-xl border border-yellow-500/30 font-bold transition">
+          <i class="fa-solid fa-trophy"></i>
+        </button>
+
+        <button onclick="toggleAdminPanel()" class="glass-panel hover:bg-slate-800 text-rose-400 p-2.5 rounded-xl border border-rose-500/30 font-bold transition">
+          <i class="fa-solid fa-shield-halved"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- BOTTOM BAR: COMBAT ACTION HOTBAR & BEAST SUMMON -->
+    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 pointer-events-none w-full max-w-2xl px-4">
+      
+      <!-- Beast & Attack Hotbar -->
+      <div class="glass-panel p-2 rounded-2xl border border-cyan-500/30 flex items-center gap-2 pointer-events-auto overflow-x-auto max-w-full">
+        <!-- Melee Basic Controls -->
+        <button onclick="performAttack('punch')" class="group relative bg-slate-900 hover:bg-slate-800 border border-slate-700 w-12 h-12 rounded-xl flex flex-col items-center justify-center transition">
+          <i class="fa-solid fa-hand-fist text-amber-400 text-lg"></i>
+          <span class="text-[9px] font-black text-slate-400">Punch</span>
+          <span class="absolute -top-1 -right-1 text-[9px] bg-slate-800 text-slate-300 px-1 rounded border border-slate-700">LMB</span>
+        </button>
+
+        <button onclick="performAttack('kick')" class="group relative bg-slate-900 hover:bg-slate-800 border border-slate-700 w-12 h-12 rounded-xl flex flex-col items-center justify-center transition">
+          <i class="fa-solid fa-shoe-prints text-amber-400 text-lg"></i>
+          <span class="text-[9px] font-black text-slate-400">Kick</span>
+          <span class="absolute -top-1 -right-1 text-[9px] bg-slate-800 text-slate-300 px-1 rounded border border-slate-700">RMB</span>
+        </button>
+
+        <button onclick="performAttack('weapon')" class="group relative bg-slate-900 hover:bg-slate-800 border border-slate-700 w-12 h-12 rounded-xl flex flex-col items-center justify-center transition">
+          <i id="equipped-weapon-icon" class="fa-solid fa-shield-halved text-cyan-400 text-lg"></i>
+          <span id="equipped-weapon-label" class="text-[9px] font-black text-slate-400 truncate w-10 text-center">Sword</span>
+          <span class="absolute -top-1 -right-1 text-[9px] bg-slate-800 text-slate-300 px-1 rounded border border-slate-700">E</span>
+        </button>
+
+        <div class="h-8 w-px bg-slate-800 mx-1"></div>
+
+        <!-- Hotbar Technique Slots (1-5) -->
+        <div id="hotbar-slots" class="flex items-center gap-2">
+          <!-- Dynamically Rendered Hotbar Abilities -->
+        </div>
+
+        <div class="h-8 w-px bg-slate-800 mx-1"></div>
+
+        <!-- Beast Summon / Fusion Toggle -->
+        <button id="summon-beast-btn" onclick="toggleBeastSummon()" class="bg-gradient-to-tr from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white w-12 h-12 rounded-xl flex flex-col items-center justify-center shadow-lg transition">
+          <i class="fa-solid fa-dragon text-lg"></i>
+          <span class="text-[9px] font-black uppercase">Beast</span>
+        </button>
+      </div>
+
+      <!-- Controls Hint Bar -->
+      <div class="text-[11px] text-slate-400 font-bold bg-slate-950/80 px-4 py-1 rounded-full border border-slate-800">
+        [WASD] Move | [Mouse] Camera | [Space] Jump | [1-5] Techniques | [Shift] Fly
+      </div>
+    </div>
+
+    <!-- LEFT SIDE CHAT & SOCIAL WINDOW -->
+    <div class="absolute bottom-4 left-4 z-10 w-80 max-w-[calc(100vw-2rem)] pointer-events-auto">
+      <div class="glass-panel p-3 rounded-2xl border border-slate-800 flex flex-col h-56">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+          <span class="font-bold text-slate-300 flex items-center gap-1">
+            <i class="fa-solid fa-comments text-cyan-400"></i> Realm Chat
+          </span>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800">
+              Auto-English
+            </span>
+            <button id="voice-chat-btn" onclick="toggleVoiceChat()" class="text-[10px] bg-slate-800 hover:bg-slate-700 px-2 py-0.5 rounded text-slate-300 flex items-center gap-1">
+              <i id="voice-icon" class="fa-solid fa-microphone-slash text-red-400"></i> Voice
+            </button>
+          </div>
+        </div>
+
+        <!-- Chat History Box -->
+        <div id="chat-messages" class="flex-1 overflow-y-auto my-2 space-y-1.5 text-xs pr-1">
+          <div class="text-slate-400 italic text-[11px]">[System]: Welcome to Infinite Survival Lv 1-800! No abusive language permitted.</div>
+          <div class="text-cyan-300"><span class="font-bold text-cyan-400">[GamerGod800]:</span> Anyone wanna trade Kurama for Mahoraga?</div>
+          <div class="text-purple-300"><span class="font-bold text-purple-400">[TitanSlayer]:</span> Just unlocked SS5 Beast Fusion form!</div>
+        </div>
+
+        <!-- Chat Input Form -->
+        <form onsubmit="event.preventDefault(); sendChatMessage();" class="flex gap-2">
+          <input type="text" id="chat-input" placeholder="Type message..." class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-cyan-500">
+          <button type="submit" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1 rounded-lg font-bold text-xs">
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS & OVERLAYS ==================== -->
+
+  <!-- 1. SHOP MODAL (Techniques, Beasts, Weapons, Outfits, Infinites) -->
+  <div id="shop-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-4xl h-[85vh] rounded-2xl flex flex-col border border-cyan-500/30 overflow-hidden">
+      <!-- Modal Header -->
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-cart-shopping text-cyan-400 text-xl"></i>
+          <h2 class="text-xl font-black text-white">REALM MARKETPLACE</h2>
+        </div>
+        <button onclick="toggleModal('shop-modal')" class="text-slate-400 hover:text-white text-lg px-2">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Shop Navigation Tabs -->
+      <div class="flex border-b border-slate-800 bg-slate-900/40">
+        <button onclick="switchShopTab('tech')" id="tab-btn-tech" class="shop-tab-btn flex-1 py-2.5 font-bold text-xs sm:text-sm text-cyan-400 border-b-2 border-cyan-500">
+          20 Techniques
+        </button>
+        <button onclick="switchShopTab('beasts')" id="tab-btn-beasts" class="shop-tab-btn flex-1 py-2.5 font-bold text-xs sm:text-sm text-slate-400">
+          10 Beasts
+        </button>
+        <button onclick="switchShopTab('weapons')" id="tab-btn-weapons" class="shop-tab-btn flex-1 py-2.5 font-bold text-xs sm:text-sm text-slate-400">
+          Weapons
+        </button>
+        <button onclick="switchShopTab('clothes')" id="tab-btn-clothes" class="shop-tab-btn flex-1 py-2.5 font-bold text-xs sm:text-sm text-slate-400">
+          Clothing
+        </button>
+        <button onclick="switchShopTab('currency')" id="tab-btn-currency" class="shop-tab-btn flex-1 py-2.5 font-bold text-xs sm:text-sm text-purple-400">
+          Get Infinites
+        </button>
+      </div>
+
+      <!-- Shop Items Content Container -->
+      <div id="shop-items-container" class="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Shop items injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. FORMS & TRANSFORMATIONS MODAL (25 Forms) -->
+  <div id="forms-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-4xl h-[85vh] rounded-2xl flex flex-col border border-amber-500/30 overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-bolt text-amber-400 text-xl"></i>
+          <h2 class="text-xl font-black text-white">25 TRANSFORMATIONS & FORMS</h2>
+        </div>
+        <button onclick="toggleModal('forms-modal')" class="text-slate-400 hover:text-white text-lg px-2">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-3 bg-amber-950/30 border-b border-amber-900/40 text-xs text-amber-200 flex justify-between items-center">
+        <span>Higher level forms give massive multiplier stats & unique dynamic dynamic glow auras!</span>
+        <span class="font-bold">Equipped: <span id="modal-active-form-name" class="text-amber-400">Base Form</span></span>
+      </div>
+
+      <div id="forms-grid" class="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- 25 Forms injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. TRADING SYSTEM MODAL -->
+  <div id="trade-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-3xl rounded-2xl flex flex-col border border-emerald-500/30 overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-handshake text-emerald-400 text-xl"></i>
+          <h2 class="text-xl font-black text-white">PLAYER TRADING EXCHANGE</h2>
+        </div>
+        <button onclick="toggleModal('trade-modal')" class="text-slate-400 hover:text-white text-lg px-2">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Item Selection -->
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-2">Offer Item / Technique / Beast</label>
+            <select id="trade-item-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500">
+              <option value="Kurama">Kurama (Nine-Tails Beast)</option>
+              <option value="Mahoraga">Mahoraga (Shikigami)</option>
+              <option value="World Slash">World Slash (Technique)</option>
+              <option value="Destructo Disc">Destructo Disc (Technique)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 uppercase mb-2">Target Trade Price (Tokens / Infinites)</label>
+            <input type="number" id="trade-price-input" value="5000" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <button onclick="executeTradeOffer()" class="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 font-black rounded-xl text-white shadow-lg transition">
+          POST TRADE OFFER TO GLOBAL MARKET
+        </button>
+
+        <div class="border-t border-slate-800 pt-4">
+          <h3 class="text-sm font-bold text-slate-300 mb-3">Live Global Market Listings</h3>
+          <div id="trade-listings" class="space-y-2 max-h-48 overflow-y-auto">
+            <!-- Listings -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. LEADERBOARD MODAL -->
+  <div id="leaderboard-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-xl rounded-2xl flex flex-col border border-yellow-500/30 overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-trophy text-yellow-400 text-xl"></i>
+          <h2 class="text-xl font-black text-white">TOP DIVINE WARRIORS (LV 800)</h2>
+        </div>
+        <button onclick="toggleModal('leaderboard-modal')" class="text-slate-400 hover:text-white text-lg px-2">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-4 overflow-y-auto max-h-[60vh] space-y-2">
+        <div id="leaderboard-list">
+          <!-- Dynamic Leaderboard list -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ADMIN PANEL & UPDATE SYSTEM MODAL -->
+  <div id="admin-modal" class="hidden fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-md rounded-2xl flex flex-col border border-rose-500/40 overflow-hidden">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/60">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-rose-400 text-xl"></i>
+          <h2 class="text-xl font-black text-white">ADMIN COMMAND CONTROL</h2>
+        </div>
+        <button onclick="toggleAdminPanel()" class="text-slate-400 hover:text-white text-lg px-2">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Set Level (1 - 800)</label>
+          <div class="flex gap-2">
+            <input type="number" id="admin-level-input" min="1" max="800" value="800" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm text-white">
+            <button onclick="adminSetLevel()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2 rounded-lg text-xs">Apply</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Add Currency Tokens / Infinites</label>
+          <div class="flex gap-2">
+            <button onclick="adminAddCurrency(50000, 1000)" class="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 rounded-lg text-xs">
+              +50k Tokens / 1k Infinites
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Spawn World Boss (Titan / Kurama)</label>
+          <button onclick="spawnBossEntity()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 rounded-lg text-xs">
+            SPAWN LEVEL 800 ROGUE TITAN
+          </button>
+        </div>
+
+        <div class="border-t border-slate-800 pt-3">
+          <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Push System Live Update</label>
+          <button onclick="triggerGameUpdate()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 rounded-lg text-xs">
+            <i class="fa-solid fa-arrows-rotate mr-1"></i> SIMULATE GAME UPDATE v2.5
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME LOGIC & THREE.JS CANVAS SCRIPTS -->
+  <script>
+    /* =========================================================================
+       1. GAME DATA DEFINITIONS & CONSTANTS
+       ========================================================================= */
+
+    // 5 Master Rankings
+    const MASTER_RANKS = [
+      { name: "Intermediate", minLv: 1, maxLv: 150, color: "text-slate-300" },
+      { name: "Intermediate Max", minLv: 151, maxLv: 350, color: "text-cyan-400" },
+      { name: "Mastery", minLv: 351, maxLv: 550, color: "text-purple-400" },
+      { name: "God Ki", minLv: 551, maxLv: 750, color: "text-amber-400" },
+      { name: "Divine", minLv: 751, maxLv: 800, color: "text-rose-400 text-glow-gold" }
+    ];
+
+    // 20 Techniques
+    const ALL_TECHNIQUES = [
+      { id: "destructo_disc", name: "Destructo Disc", desc: "Spinning razor energy blade slicing foes.", cost: 1200, type: "projectile", color: 0xffff00 },
+      { id: "world_slash", name: "World Slash", desc: "Spatial slash cleaving through existence.", cost: 5000, type: "beam", color: 0xaa00ff },
+      { id: "teleportation", name: "Teleportation", desc: "Instantaneous flash movement across field.", cost: 800, type: "utility", color: 0x00ffff },
+      { id: "hand_blast", name: "Hand Blast", desc: "Rapid ki palm blasts with explosive impact.", cost: 500, type: "projectile", color: 0x00ff88 },
+      { id: "kame_beam", name: "Kame Beam", desc: "Concentrated wave of massive ki power.", cost: 2500, type: "beam", color: 0x00aaff },
+      { id: "spirit_bomb", name: "Spirit Bomb", desc: "Gather planetary energy into huge orb.", cost: 10000, type: "aoe", color: 0x33ffff },
+      { id: "domain_slash", name: "Domain Slash", desc: "Enclose target in malevolent cutting domain.", cost: 15000, type: "aoe", color: 0xff0055 },
+      { id: "flash_step", name: "Flash Step", desc: "High speed blur dodge behind enemies.", cost: 600, type: "utility", color: 0xffffff },
+      { id: "fire_dragon", name: "Fire Dragon", desc: "Summon roaring inferno dragon projectile.", cost: 3000, type: "projectile", color: 0xff4400 },
+      { id: "lightning_strike", name: "Lightning Strike", desc: "Thunderbolt from heaven crashing down.", cost: 3500, type: "aoe", color: 0x00e1ff },
+      { id: "hollow_purple", name: "Hollow Purple", desc: "Combine red & blue for matter erasure sphere.", cost: 20000, type: "projectile", color: 0xa855f7 },
+      { id: "divine_punishment", name: "Divine Punishment", desc: "Rains golden swords upon target zone.", cost: 12000, type: "aoe", color: 0xeab308 },
+      { id: "rasengan_orb", name: "Rasengan Orb", desc: "Swirling spiral orb pressed directly into foe.", cost: 1500, type: "meleeskill", color: 0x38bdf8 },
+      { id: "black_flash", name: "Black Flash", desc: "Spatial distortion impact multiplying strike x2.5.", cost: 4000, type: "meleeskill", color: 0x0f172a },
+      { id: "ice_age", name: "Ice Age", desc: "Freezes surrounding battlefield instantly.", cost: 6000, type: "aoe", color: 0xbae6fd },
+      { id: "solar_flare", name: "Solar Flare", desc: "Blinds surrounding titans and rogue beasts.", cost: 900, type: "utility", color: 0xfef08a },
+      { id: "final_flash", name: "Final Flash", desc: "Supercharged wide beam of destruction.", cost: 18000, type: "beam", color: 0xfacc15 },
+      { id: "blood_blade", name: "Blood Blade", desc: "Compress blood into razor-sharp whip.", cost: 2800, type: "projectile", color: 0xef4444 },
+      { id: "gravity_pull", name: "Gravity Pull", desc: "Pulls all nearby enemies into melee range.", cost: 3200, type: "utility", color: 0x6366f1 },
+      { id: "supernova", name: "Supernova", desc: "Massive sun sphere wiping out whole wave.", cost: 25000, type: "aoe", color: 0xf97316 }
+    ];
+
+    // 10 Summonable Beasts (Shikigami & Kurama Tailed Beasts)
+    const ALL_BEASTS = [
+      { id: "kurama", name: "Kurama (Nine-Tails)", desc: "Tailed Beast providing unlimited energy. Subject to Erasure timer!", price: 10000, duration: 25, color: 0xff4500, fusionForm: "SS4 Beast Fusion" },
+      { id: "mahoraga", name: "Eight-Handed Mahoraga", desc: "Divine Shikigami adapting to any combat attack.", price: 15000, duration: 30, color: 0xffffff, fusionForm: "SS5 Divine Shikigami" },
+      { id: "divine_dog", name: "Divine Dog Totality", desc: "Swift shadows with razor claws and high speed.", price: 2000, duration: 40, color: 0x334155, fusionForm: "Shadow Beast Form" },
+      { id: "nue", name: "Nue (Thunder Bird)", desc: "Avian monster delivering electric shock waves.", price: 3500, duration: 35, color: 0x38bdf8, fusionForm: "Storm God Form" },
+      { id: "great_serpent", name: "Great Serpent Orochi", desc: "Massive shadow serpent ambushing from ground.", price: 4500, duration: 30, color: 0x166534, fusionForm: "Viper Aura Form" },
+      { id: "max_elephant", name: "Max Elephant", desc: "Crushes foes under extreme weight and high water force.", price: 5000, duration: 35, color: 0x0284c7, fusionForm: "Colossal Titan Form" },
+      { id: "rabbit_escape", name: "Rabbit Escape Swarm", desc: "Summons thousands of decoy shadow rabbits.", price: 1500, duration: 45, color: 0xf8fafc, fusionForm: "Phantom Mirage" },
+      { id: "gyuki", name: "Gyuki (Eight-Tails)", desc: "Ox-octopus beast firing massive Beast Bombs.", price: 8500, duration: 28, color: 0x78350f, fusionForm: "SS4 Octo-Hybrid" },
+      { id: "matatabi", name: "Matatabi (Two-Tails)", desc: "Blue flame cat searing all surrounding titans.", price: 7000, duration: 30, color: 0x2563eb, fusionForm: "Blue Inferno SSJ" },
+      { id: "shukaku", name: "Shukaku (One-Tail)", desc: "Sand beast wielding air bullets and seals.", price: 6000, duration: 32, color: 0xd97706, fusionForm: "Desert Deity Form" }
+    ];
+
+    // Weapons Catalog
+    const ALL_WEAPONS = [
+      { id: "starter_sword", name: "Starter Sword", type: "Sword", price: 0, damage: 25, icon: "fa-shield-halved" },
+      { id: "katana_dragon", name: "Dragon Katana", type: "Katana", price: 1500, damage: 60, icon: "fa-khanda" },
+      { id: "war_hammer", name: "Titan War Hammer", type: "War Hammer", price: 3500, damage: 120, icon: "fa-hammer" },
+      { id: "greatspear", name: "Celestial Greatspear", type: "Greatspear", price: 6000, damage: 200, icon: "fa-location-arrow" },
+      { id: "reaper_scythe", name: "Reaper Scythe", type: "Scythe", price: 12000, damage: 380, icon: "fa-disease" },
+      { id: "dual_daggers", name: "Shadow Dual Daggers", type: "Dual Daggers", price: 8000, damage: 290, icon: "fa-bolt text-cyan-400" }
+    ];
+
+    // Clothing Options
+    const ALL_CLOTHES = [
+      { id: "default_gi", name: "Warrior Turtle Gi", price: 0, colorHex: "#f97316" },
+      { id: "shadow_cloak", name: "Shadow Anbu Cloak", price: 1000, colorHex: "#0f172a" },
+      { id: "divine_robes", name: "Divine God Robes", price: 5000, colorHex: "#eab308" },
+      { id: "cyber_armor", name: "Cyberpunk Mech Armor", price: 10000, colorHex: "#06b6d4" }
+    ];
+
+    // 25 Unlockable Forms
+    const ALL_FORMS = [
+      { id: 1, name: "Base Form", reqLv: 1, mult: 1.0, auraColor: 0x38bdf8 },
+      { id: 2, name: "Kaioken x10", reqLv: 15, mult: 1.3, auraColor: 0xef4444 },
+      { id: 3, name: "Super Saiyan 1", reqLv: 30, mult: 1.6, auraColor: 0xeab308 },
+      { id: 4, name: "Super Saiyan 2", reqLv: 60, mult: 2.0, auraColor: 0xfacc15 },
+      { id: 5, name: "Super Saiyan 3", reqLv: 100, mult: 2.5, auraColor: 0xfef08a },
+      { id: 6, name: "SS4 Beast Fusion", reqLv: 150, mult: 3.2, auraColor: 0xd97706 },
+      { id: 7, name: "SS5 Divine Beast", reqLv: 200, mult: 4.0, auraColor: 0xd946ef },
+      { id: 8, name: "Super Saiyan God", reqLv: 250, mult: 5.0, auraColor: 0xd97706 },
+      { id: 9, name: "Super Saiyan Blue", reqLv: 300, mult: 6.2, auraColor: 0x06b6d4 },
+      { id: 10, name: "Ultra Instinct Omen", reqLv: 350, mult: 7.5, auraColor: 0x94a3b8 },
+      { id: 11, name: "Mastered Ultra Instinct", reqLv: 400, mult: 9.0, auraColor: 0xf8fafc },
+      { id: 12, name: "Ultra Ego", reqLv: 450, mult: 11.0, auraColor: 0xa855f7 },
+      { id: 13, name: "Titan Slayer Form", reqLv: 500, mult: 13.5, auraColor: 0x10b981 },
+      { id: 14, name: "Kurama Link Form", reqLv: 550, mult: 16.0, auraColor: 0xf97316 },
+      { id: 15, name: "Six Paths Sage", reqLv: 600, mult: 19.0, auraColor: 0xfef08a },
+      { id: 16, name: "Demon King Unleashed", reqLv: 630, mult: 22.0, auraColor: 0x9f1239 },
+      { id: 17, name: "Limit Breaker SS4", reqLv: 660, mult: 26.0, auraColor: 0xd97706 },
+      { id: 18, name: "God Ki Overdrive", reqLv: 690, mult: 30.0, auraColor: 0x38bdf8 },
+      { id: 19, name: "Spatial Sovereign", reqLv: 720, mult: 35.0, auraColor: 0x8b5cf6 },
+      { id: 20, name: "Celestial Conqueror", reqLv: 740, mult: 40.0, auraColor: 0xf43f5e },
+      { id: 21, name: "Divine Realm Master", reqLv: 760, mult: 48.0, auraColor: 0xfacc15 },
+      { id: 22, name: "Infinite Existence", reqLv: 780, mult: 58.0, auraColor: 0x06b6d4 },
+      { id: 23, name: "Absolute Domain God", reqLv: 790, mult: 70.0, auraColor: 0xec4899 },
+      { id: 24, name: "Omega Primordial SS5", reqLv: 795, mult: 85.0, auraColor: 0xa855f7 },
+      { id: 25, name: "Lv 800 Divine Creator", reqLv: 800, mult: 100.0, auraColor: 0xffffff }
+    ];
+
+    /* =========================================================================
+       2. STATE MANAGEMENT & PLAYER INSTANCE
+       ========================================================================= */
+
+    const state = {
+      username: "Warrior",
+      email: "",
+      gender: "Male",
+      level: 1,
+      tokens: 1000,
+      infinix: 50,
+      activeForm: ALL_FORMS[0],
+      unlockedForms: [1],
+      unlockedTechs: ["hand_blast"],
+      equippedTechs: ["hand_blast"],
+      unlockedBeasts: ["kurama"],
+      activeBeast: null,
+      beastTimer: 0,
+      equippedWeapon: ALL_WEAPONS[0],
+      equippedOutfit: ALL_CLOTHES[0],
+      hp: 100,
+      maxHp: 100,
+      ki: 100,
+      maxKi: 100,
+      isVoiceActive: false,
+      chatHistory: []
+    };
+
+    /* =========================================================================
+       3. THREE.JS ENGINE SETUP & GRAPHICS
+       ========================================================================= */
+
+    let scene, camera, renderer, controls;
+    let playerMesh, auraParticles;
+    let targets = []; // Titans, Rogue Beasts, AI Players
+    let activeEffects = [];
+
+    function initThreeJS() {
+      const container = document.getElementById('canvas-container');
+      
+      // Scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x070a13);
+      scene.fog = new THREE.FogExp2(0x070a13, 0.008);
+
+      // Camera
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 10, 25);
+
+      // Renderer
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      container.appendChild(renderer.domElement);
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+
+      const dirLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+      dirLight.position.set(50, 100, 50);
+      dirLight.castShadow = true;
+      scene.add(dirLight);
+
+      // Procedural Arena Terrain
+      const gridGeo = new THREE.PlaneGeometry(300, 300, 40, 40);
+      const gridMat = new THREE.MeshStandardMaterial({
+        color: 0x0f172a,
+        roughness: 0.8,
+        wireframe: false
+      });
+      const terrain = new THREE.Mesh(gridGeo, gridMat);
+      terrain.rotation.x = -Math.PI / 2;
+      terrain.receiveShadow = true;
+      scene.add(terrain);
+
+      // Grid Lines Overlay
+      const gridHelper = new THREE.GridHelper(300, 60, 0x00f0ff, 0x1e293b);
+      gridHelper.position.y = 0.05;
+      scene.add(gridHelper);
+
+      // Build Player Character Mesh
+      buildPlayerMesh();
+
+      // Controls (Orbit Camera)
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxPolarAngle = Math.PI / 2 - 0.02;
+      controls.target.copy(playerMesh.position);
+
+      // Spawn Initial World Targets (Titans, Rogue Beasts, AI Rivals)
+      spawnWorldEntities();
+
+      // Window Resize Listener
+      window.addEventListener('resize', onWindowResize);
+
+      // Key Bindings
+      window.addEventListener('keydown', handleKeyDown);
+
+      // Start Game Loop
+      animate();
+    }
+
+    // Build 3D Player Mesh
+    function buildPlayerMesh() {
+      if (playerMesh) scene.remove(playerMesh);
+
+      const group = new THREE.Group();
+
+      // Body / Torso
+      const torsoGeo = new THREE.CylinderGeometry(0.8, 0.6, 2, 8);
+      const outfitColor = state.equippedOutfit ? parseInt(state.equippedOutfit.colorHex.replace('#', '0x')) : 0x0284c7;
+      const torsoMat = new THREE.MeshStandardMaterial({ color: outfitColor, roughness: 0.3 });
+      const torso = new THREE.Mesh(torsoGeo, torsoMat);
+      torso.position.y = 1.8;
+      torso.castShadow = true;
+      group.add(torso);
+
+      // Head
+      const headGeo = new THREE.SphereGeometry(0.5, 16, 16);
+      const headMat = new THREE.MeshStandardMaterial({ color: 0xffdbac });
+      const head = new THREE.Mesh(headGeo, headMat);
+      head.position.y = 3.2;
+      head.castShadow = true;
+      group.add(head);
+
+      // Sword Mesh attached to back / hand
+      const swordGeo = new THREE.BoxGeometry(0.1, 2.5, 0.3);
+      const swordMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.8 });
+      const sword = new THREE.Mesh(swordGeo, swordMat);
+      sword.position.set(0.6, 2.2, -0.4);
+      sword.rotation.z = -Math.PI / 4;
+      group.add(sword);
+
+      // Aura Particles Group
+      const pGeo = new THREE.BufferGeometry();
+      const pCount = 80;
+      const posArray = new Float32Array(pCount * 3);
+      for (let i = 0; i < pCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 3;
+      }
+      pGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+      
+      const pMat = new THREE.PointsMaterial({
+        size: 0.25,
+        color: state.activeForm ? state.activeForm.auraColor : 0x38bdf8,
+        transparent: true,
+        opacity: 0.8
+      });
+      auraParticles = new THREE.Points(pGeo, pMat);
+      group.add(auraParticles);
+
+      group.position.set(0, 0, 0);
+      playerMesh = group;
+      scene.add(playerMesh);
+    }
+
+    // Spawn Rogue Beasts, Titans & AI Rivals
+    function spawnWorldEntities() {
+      // Clear existing
+      targets.forEach(t => scene.remove(t.mesh));
+      targets = [];
+
+      // 1. Rogue Titans
+      for (let i = 0; i < 4; i++) {
+        createEntity("Titan", 0xef4444, 6, 800 + i * 200, (Math.random() - 0.5) * 180, (Math.random() - 0.5) * 180);
+      }
+
+      // 2. Rogue Shikigami Beasts
+      for (let i = 0; i < 6; i++) {
+        createEntity("Rogue Beast", 0xa855f7, 3, 400 + i * 150, (Math.random() - 0.5) * 180, (Math.random() - 0.5) * 180);
+      }
+
+      // 3. Simulated Rival Players
+      for (let i = 0; i < 5; i++) {
+        createEntity("Rival Player", 0x38bdf8, 2, 250 + i * 100, (Math.random() - 0.5) * 180, (Math.random() - 0.5) * 180);
+      }
+    }
+
+    function createEntity(type, colorHex, scale, hp, x, z) {
+      const geo = type === "Titan" 
+        ? new THREE.BoxGeometry(scale, scale * 2.2, scale)
+        : new THREE.DodecahedronGeometry(scale);
+      
+      const mat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.4 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, scale, z);
+      mesh.castShadow = true;
+      scene.add(mesh);
+
+      targets.push({
+        type: type,
+        mesh: mesh,
+        hp: hp,
+        maxHp: hp,
+        scale: scale,
+        colorHex: colorHex
+      });
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    /* =========================================================================
+       4. GAME LOOP & ANIMATIONS
+       ========================================================================= */
+
+    let lastTime = performance.now();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const now = performance.now();
+      const delta = (now - lastTime) / 1000;
+      lastTime = now;
+
+      // Rotate Aura Particles around Player
+      if (auraParticles) {
+        auraParticles.rotation.y += delta * 2;
+      }
+
+      // Update Active Spell / Attack Projectiles
+      updateProjectiles(delta);
+
+      // Beast Erasure Timer Logic
+      if (state.activeBeast) {
+        state.beastTimer -= delta;
+        const fill = document.getElementById('beast-timer-fill');
+        if (fill) {
+          const pct = Math.max(0, (state.beastTimer / state.activeBeast.duration) * 100);
+          fill.style.width = pct + "%";
+        }
+
+        if (state.beastTimer <= 0) {
+          triggerBeastErasure();
+        }
+      }
+
+      // Smooth Camera Chase
+      if (playerMesh && controls) {
+        controls.target.lerp(playerMesh.position, 0.1);
+        controls.update();
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function updateProjectiles(delta) {
+      for (let i = activeEffects.length - 1; i >= 0; i--) {
+        const fx = activeEffects[i];
+        fx.mesh.position.addScaledVector(fx.dir, fx.speed * delta);
+        fx.life -= delta;
+
+        // Check Collision with Targets
+        targets.forEach(target => {
+          if (fx.mesh.position.distanceTo(target.mesh.position) < target.scale + 1.5) {
+            applyDamage(target, fx.damage);
+            fx.life = 0; // Destroy projectile on hit
+          }
+        });
+
+        if (fx.life <= 0) {
+          scene.remove(fx.mesh);
+          activeEffects.splice(i, 1);
+        }
+      }
+    }
+
+    /* =========================================================================
+       5. COMBAT & ATTACK EXECUTIONS
+       ========================================================================= */
+
+    function performAttack(type) {
+      if (!playerMesh) return;
+
+      const pPos = playerMesh.position.clone();
+      const formMult = state.activeForm ? state.activeForm.mult : 1.0;
+      const weaponDmg = state.equippedWeapon ? state.equippedWeapon.damage : 20;
+
+      if (type === 'punch' || type === 'kick') {
+        const dmg = Math.floor((15 + weaponDmg) * formMult);
+        createSlashEffect(pPos, 0xffaa00);
+        hitNearestTarget(pPos, 5, dmg);
+      } else if (type === 'weapon') {
+        const dmg = Math.floor((40 + weaponDmg * 2) * formMult);
+        createSlashEffect(pPos, 0x00f0ff);
+        hitNearestTarget(pPos, 7, dmg);
+      }
+    }
+
+    function triggerTechnique(techId) {
+      const tech = ALL_TECHNIQUES.find(t => t.id === techId);
+      if (!tech) return;
+
+      const pPos = playerMesh.position.clone();
+      pPos.y += 1.5;
+      const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(playerMesh.quaternion);
+
+      const formMult = state.activeForm ? state.activeForm.mult : 1.0;
+      const baseDmg = Math.floor(120 * formMult);
+
+      if (tech.id === 'teleportation' || tech.id === 'flash_step') {
+        playerMesh.position.addScaledVector(dir, 15);
+        createSlashEffect(playerMesh.position, 0x00ffff);
+        return;
+      }
+
+      if (tech.id === 'destructo_disc') {
+        // Spinning Disc Mesh
+        const geo = new THREE.CylinderGeometry(2, 2, 0.1, 16);
+        const mat = new THREE.MeshBasicMaterial({ color: tech.color, wireframe: true });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pPos);
+        scene.add(mesh);
+
+        activeEffects.push({ mesh: mesh, dir: dir, speed: 35, life: 2.5, damage: baseDmg * 1.5 });
+      } else if (tech.id === 'world_slash') {
+        // Line Beam Slice Mesh
+        const geo = new THREE.BoxGeometry(10, 0.2, 1);
+        const mat = new THREE.MeshBasicMaterial({ color: tech.color });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pPos);
+        scene.add(mesh);
+
+        activeEffects.push({ mesh: mesh, dir: dir, speed: 40, life: 2.0, damage: baseDmg * 3.0 });
+      } else {
+        // Standard Energy Orb / Projectile
+        const geo = new THREE.SphereGeometry(1.2, 16, 16);
+        const mat = new THREE.MeshBasicMaterial({ color: tech.color });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.position.copy(pPos);
+        scene.add(mesh);
+
+        activeEffects.push({ mesh: mesh, dir: dir, speed: 30, life: 3.0, damage: baseDmg });
+      }
+    }
+
+    function createSlashEffect(pos, colorHex) {
+      const geo = new THREE.RingGeometry(0.5, 2.5, 16);
+      const mat = new THREE.MeshBasicMaterial({ color: colorHex, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.copy(pos);
+      mesh.rotation.x = Math.PI / 2;
+      scene.add(mesh);
+
+      setTimeout(() => scene.remove(mesh), 200);
+    }
+
+    function hitNearestTarget(pos, range, dmg) {
+      targets.forEach(target => {
+        if (pos.distanceTo(target.mesh.position) <= range + target.scale) {
+          applyDamage(target, dmg);
+        }
+      });
+    }
+
+    function applyDamage(target, dmg) {
+      target.hp -= dmg;
+      showDamagePopup(target.mesh.position, dmg);
+
+      if (target.hp <= 0) {
+        // Target Defeated Reward Tokens & XP
+        const earnedTokens = target.type === "Titan" ? 500 : 200;
+        state.tokens += earnedTokens;
+        
+        // Level Progression
+        if (state.level < 800) {
+          state.level += 1;
+          checkRankUpdate();
+        }
+
+        updateHUD();
+
+        // Respawn Target at Random Location
+        target.hp = target.maxHp;
+        target.mesh.position.set((Math.random() - 0.5) * 200, target.scale, (Math.random() - 0.5) * 200);
+      }
+    }
+
+    function showDamagePopup(pos, dmg) {
+      const pop = document.createElement('div');
+      pop.className = 'dmg-popup text-amber-400 text-xl';
+      pop.innerText = `-${dmg}`;
+      
+      // Screen Projection
+      const tempVec = pos.clone();
+      tempVec.y += 2;
+      tempVec.project(camera);
+
+      const x = (tempVec.x * .5 + .5) * window.innerWidth;
+      const y = (-(tempVec.y * .5) + .5) * window.innerHeight;
+
+      pop.style.left = `${x}px`;
+      pop.style.top = `${y}px`;
+
+      document.body.appendChild(pop);
+      setTimeout(() => pop.remove(), 800);
+    }
+
+    /* =========================================================================
+       6. BEAST SUMMON & TIME-LIMITED ERASURE MECHANIC
+       ========================================================================= */
+
+    function toggleBeastSummon() {
+      if (state.activeBeast) {
+        // Despawn Beast
+        state.activeBeast = null;
+        document.getElementById('beast-status-card').classList.add('hidden');
+        return;
+      }
+
+      if (state.unlockedBeasts.length === 0) {
+        alert("Unlock a Beast in the Marketplace first!");
+        return;
+      }
+
+      const beastId = state.unlockedBeasts[0];
+      const beast = ALL_BEASTS.find(b => b.id === beastId) || ALL_BEASTS[0];
+
+      state.activeBeast = beast;
+      state.beastTimer = beast.duration;
+
+      document.getElementById('beast-status-card').classList.remove('hidden');
+      document.getElementById('active-beast-name').innerText = beast.name;
+
+      // Auto-Equip Hybrid Beast Form (e.g. SS4 / SS5 Beast Fusion)
+      const fusionForm = ALL_FORMS.find(f => f.name.includes("Beast")) || ALL_FORMS[5];
+      state.activeForm = fusionForm;
+      buildPlayerMesh();
+      updateHUD();
+    }
+
+    function triggerBeastErasure() {
+      alert(`[ERASURE NOTICE]: Your Beast (${state.activeBeast.name}) has exceeded its temporal window and suffered COMPLETE ERASURE! Cooldown active.`);
+      state.activeBeast = null;
+      document.getElementById('beast-status-card').classList.add('hidden');
+      
+      // Revert to Base Form
+      state.activeForm = ALL_FORMS[0];
+      buildPlayerMesh();
+      updateHUD();
+    }
+
+    /* =========================================================================
+       7. UI UPDATES & SYSTEM MODALS
+       ========================================================================= */
+
+    function selectGender(g) {
+      state.gender = g;
+      document.querySelectorAll('.gender-btn').forEach(b => {
+        b.classList.remove('border-cyan-500', 'bg-cyan-500/20', 'text-cyan-300');
+        b.classList.add('border-slate-700', 'bg-slate-900/50', 'text-slate-400');
+      });
+
+      const btn = document.getElementById(g === 'Male' ? 'gender-male-btn' : 'gender-female-btn');
+      btn.classList.add('border-cyan-500', 'bg-cyan-500/20', 'text-cyan-300');
+    }
+
+    function startGame() {
+      state.username = document.getElementById('input-username').value || "Warrior";
+      state.email = document.getElementById('input-email').value;
+
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('game-ui').classList.remove('hidden');
+
+      updateHUD();
+      renderHotbar();
+      initThreeJS();
+    }
+
+    function updateHUD() {
+      document.getElementById('hud-username').innerText = state.username;
+      document.getElementById('hud-level').innerText = `Lv ${state.level} / 800`;
+      document.getElementById('token-display').innerText = state.tokens.toLocaleString();
+      document.getElementById('infinix-display').innerText = state.infinix.toLocaleString();
+      document.getElementById('form-name-text').innerText = state.activeForm.name;
+      document.getElementById('gender-indicator-badge').innerText = state.gender;
+      document.getElementById('player-avatar').innerText = state.username.charAt(0).toUpperCase();
+
+      // Weapon Label
+      if (state.equippedWeapon) {
+        document.getElementById('equipped-weapon-label').innerText = state.equippedWeapon.name;
+      }
+
+      checkRankUpdate();
+    }
+
+    function checkRankUpdate() {
+      const currentRank = MASTER_RANKS.find(r => state.level >= r.minLv && state.level <= r.maxLv) || MASTER_RANKS[0];
+      const badge = document.getElementById('rank-badge');
+      badge.innerText = currentRank.name;
+      badge.className = `absolute -bottom-1 -right-1 text-[10px] px-1.5 py-0.5 rounded-full font-black uppercase shadow bg-amber-500 text-slate-950 ${currentRank.color}`;
+    }
+
+    function renderHotbar() {
+      const container = document.getElementById('hotbar-slots');
+      container.innerHTML = '';
+
+      state.equippedTechs.forEach((techId, idx) => {
+        const tech = ALL_TECHNIQUES.find(t => t.id === techId);
+        if (!tech) return;
+
+        const btn = document.createElement('button');
+        btn.onclick = () => triggerTechnique(tech.id);
+        btn.className = "group relative bg-slate-900 hover:bg-slate-800 border border-slate-700 w-12 h-12 rounded-xl flex flex-col items-center justify-center transition";
+        btn.innerHTML = `
+          <i class="fa-solid fa-bolt text-cyan-400 text-lg"></i>
+          <span class="text-[9px] font-black text-slate-400 truncate w-10 text-center">${tech.name}</span>
+          <span class="absolute -top-1 -right-1 text-[9px] bg-cyan-950 text-cyan-300 px-1 rounded border border-cyan-800">${idx + 1}</span>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    function handleKeyDown(e) {
+      if (['1', '2', '3', '4', '5'].includes(e.key)) {
+        const idx = parseInt(e.key) - 1;
+        if (state.equippedTechs[idx]) {
+          triggerTechnique(state.equippedTechs[idx]);
+        }
+      } else if (e.key.toLowerCase() === 'e') {
+        performAttack('weapon');
+      }
+    }
+
+    /* =========================================================================
+       8. SHOP & MODAL LOGIC
+       ========================================================================= */
+
+    function toggleModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        if (modalId === 'shop-modal') switchShopTab('tech');
+        if (modalId === 'forms-modal') renderFormsGrid();
+        if (modalId === 'leaderboard-modal') renderLeaderboard();
+      } else {
+        modal.classList.add('hidden');
+      }
+    }
+
+    function switchShopTab(tab) {
+      const container = document.getElementById('shop-items-container');
+      container.innerHTML = '';
+
+      document.querySelectorAll('.shop-tab-btn').forEach(b => {
+        b.classList.remove('text-cyan-400', 'border-b-2', 'border-cyan-500');
+        b.classList.add('text-slate-400');
+      });
+
+      if (tab === 'tech') {
+        ALL_TECHNIQUES.forEach(t => {
+          const owned = state.unlockedTechs.includes(t.id);
+          container.appendChild(createShopCard(t.name, t.desc, `${t.cost} Tokens`, owned, () => buyTechnique(t)));
+        });
+      } else if (tab === 'beasts') {
+        ALL_BEASTS.forEach(b => {
+          const owned = state.unlockedBeasts.includes(b.id);
+          container.appendChild(createShopCard(b.name, b.desc, `${b.price} Tokens`, owned, () => buyBeast(b)));
+        });
+      } else if (tab === 'weapons') {
+        ALL_WEAPONS.forEach(w => {
+          const equipped = state.equippedWeapon.id === w.id;
+          container.appendChild(createShopCard(w.name, `DMG: +${w.damage} [${w.type}]`, `${w.price} Tokens`, equipped, () => equipWeapon(w)));
+        });
+      } else if (tab === 'clothes') {
+        ALL_CLOTHES.forEach(c => {
+          const equipped = state.equippedOutfit.id === c.id;
+          container.appendChild(createShopCard(c.name, `Custom Outfit Style`, `${c.price} Tokens`, equipped, () => equipOutfit(c)));
+        });
+      } else if (tab === 'currency') {
+        container.appendChild(createShopCard("1,000 Infinites Pack", "Robux-Style Currency for high-tier unlocks", "$5.00 / Tokens", false, () => buyCurrency(1000)));
+        container.appendChild(createShopCard("5,000 Infinites Pack", "Robux-Style Currency for high-tier unlocks", "$20.00 / Tokens", false, () => buyCurrency(5000)));
+      }
+    }
+
+    function createShopCard(title, desc, priceStr, isOwned, onAction) {
+      const card = document.createElement('div');
+      card.className = "glass-panel p-4 rounded-xl border border-slate-800 flex flex-col justify-between";
+      card.innerHTML = `
+        <div>
+          <h3 class="font-bold text-white text-base">${title}</h3>
+          <p class="text-xs text-slate-400 mt-1">${desc}</p>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+          <span class="text-xs font-bold text-amber-400">${priceStr}</span>
+          <button class="shop-btn px-3 py-1.5 rounded-lg text-xs font-bold ${isOwned ? 'bg-slate-800 text-slate-500' : 'bg-cyan-600 hover:bg-cyan-500 text-white'}">
+            ${isOwned ? 'EQUIPPED / OWNED' : 'BUY / EQUIP'}
+          </button>
+        </div>
+      `;
+      card.querySelector('.shop-btn').onclick = onAction;
+      return card;
+    }
+
+    function buyTechnique(tech) {
+      if (state.unlockedTechs.includes(tech.id)) return;
+      if (state.tokens < tech.cost) { alert("Not enough Tokens!"); return; }
+
+      state.tokens -= tech.cost;
+      state.unlockedTechs.push(tech.id);
+      if (state.equippedTechs.length < 5) state.equippedTechs.push(tech.id);
+
+      updateHUD();
+      renderHotbar();
+      switchShopTab('tech');
+    }
+
+    function buyBeast(beast) {
+      if (state.unlockedBeasts.includes(beast.id)) return;
+      if (state.tokens < beast.price) { alert("Not enough Tokens!"); return; }
+
+      state.tokens -= beast.price;
+      state.unlockedBeasts.push(beast.id);
+
+      updateHUD();
+      switchShopTab('beasts');
+    }
+
+    function equipWeapon(w) {
+      state.equippedWeapon = w;
+      updateHUD();
+      buildPlayerMesh();
+      switchShopTab('weapons');
+    }
+
+    function equipOutfit(c) {
+      state.equippedOutfit = c;
+      buildPlayerMesh();
+      switchShopTab('clothes');
+    }
+
+    function buyCurrency(amount) {
+      state.infinix += amount;
+      updateHUD();
+      alert(`Purchased ${amount} Infinites!`);
+    }
+
+    /* =========================================================================
+       9. 25 FORMS GRID RENDERER
+       ========================================================================= */
+
+    function renderFormsGrid() {
+      const grid = document.getElementById('forms-grid');
+      grid.innerHTML = '';
+
+      ALL_FORMS.forEach(f => {
+        const isUnlocked = state.level >= f.reqLv;
+        const isEquipped = state.activeForm.id === f.id;
+
+        const card = document.createElement('div');
+        card.className = `glass-panel p-4 rounded-xl border ${isEquipped ? 'border-amber-500' : 'border-slate-800'} flex flex-col justify-between`;
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-slate-400">Form #${f.id}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded font-black ${isUnlocked ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-red-950 text-red-400 border border-red-800'}">
+                Req: Lv ${f.reqLv}
+              </span>
+            </div>
+            <h3 class="font-bold text-white text-base mt-1">${f.name}</h3>
+            <p class="text-xs text-amber-400 font-bold mt-1">Multiplier: ${f.mult}x DMG</p>
+          </div>
+          <button class="form-btn mt-4 w-full py-2 rounded-lg text-xs font-bold ${isEquipped ? 'bg-amber-600 text-white' : isUnlocked ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-800 text-slate-600 pointer-events-none'}">
+            ${isEquipped ? 'ACTIVE FORM' : isUnlocked ? 'TRANSFORM' : 'LOCKED'}
+          </button>
+        `;
+
+        if (isUnlocked && !isEquipped) {
+          card.querySelector('.form-btn').onclick = () => {
+            state.activeForm = f;
+            document.getElementById('modal-active-form-name').innerText = f.name;
+            updateHUD();
+            buildPlayerMesh();
+            renderFormsGrid();
+          };
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    /* =========================================================================
+       10. SOCIAL, CHAT, TRADE & ADMIN SYSTEMS
+       ========================================================================= */
+
+    function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      let txt = input.value.trim();
+      if (!txt) return;
+
+      // Profanity Filter Rule
+      const forbidden = ["badword", "hack", "abuse", "scam"];
+      forbidden.forEach(w => {
+        const reg = new RegExp(w, "gi");
+        txt = txt.replace(reg, "****");
+      });
+
+      const msgBox = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = "text-white";
+      div.innerHTML = `<span class="font-bold text-cyan-400">[${state.username}]:</span> ${txt}`;
+      msgBox.appendChild(div);
+      msgBox.scrollTop = msgBox.scrollHeight;
+
+      input.value = '';
+    }
+
+    function toggleVoiceChat() {
+      state.isVoiceActive = !state.isVoiceActive;
+      const icon = document.getElementById('voice-icon');
+      if (state.isVoiceActive) {
+        icon.className = "fa-solid fa-microphone text-emerald-400 animate-pulse";
+        alert("Voice Chat Channel Connected (Simulated Audio Wave active)");
+      } else {
+        icon.className = "fa-solid fa-microphone-slash text-red-400";
+      }
+    }
+
+    function executeTradeOffer() {
+      const item = document.getElementById('trade-item-select').value;
+      const price = document.getElementById('trade-price-input').value;
+
+      const container = document.getElementById('trade-listings');
+      const div = document.createElement('div');
+      div.className = "p-2 rounded bg-slate-900 border border-slate-800 text-xs flex justify-between items-center";
+      div.innerHTML = `
+        <div>
+          <span class="font-bold text-emerald-400">[Offer]:</span> Selling <b>${item}</b>
+        </div>
+        <button class="bg-emerald-600 text-white px-2 py-1 rounded font-bold">Buy (${price} Tokens)</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function renderLeaderboard() {
+      const container = document.getElementById('leaderboard-list');
+      container.innerHTML = '';
+
+      const topWarriors = [
+        { name: state.username, level: state.level, rank: "Divine Realm" },
+        { name: "Zenith_God", level: 800, rank: "Divine" },
+        { name: "Goku_SS5", level: 800, rank: "Divine" },
+        { name: "Satoru_Gojo", level: 795, rank: "God Ki" },
+        { name: "Titan_Obliterator", level: 780, rank: "God Ki" }
+      ];
+
+      topWarriors.sort((a, b) => b.level - a.level);
+
+      topWarriors.forEach((w, i) => {
+        const div = document.createElement('div');
+        div.className = "p-3 rounded-xl bg-slate-900 border border-slate-800 flex justify-between items-center text-xs";
+        div.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="font-black text-amber-400 text-sm">#${i + 1}</span>
+            <div>
+              <div class="font-bold text-white">${w.name}</div>
+              <div class="text-[10px] text-slate-400">${w.rank}</div>
+            </div>
+          </div>
+          <span class="font-black text-cyan-400 bg-cyan-950 px-2 py-1 rounded border border-cyan-800">Lv ${w.level}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Admin Panel Actions
+    function toggleAdminPanel() {
+      const modal = document.getElementById('admin-modal');
+      modal.classList.toggle('hidden');
+    }
+
+    function adminSetLevel() {
+      const val = parseInt(document.getElementById('admin-level-input').value);
+      state.level = Math.min(800, Math.max(1, val));
+      updateHUD();
+      alert(`Level set to Lv ${state.level}!`);
+    }
+
+    function adminAddCurrency(t, i) {
+      state.tokens += t;
+      state.infinix += i;
+      updateHUD();
+    }
+
+    function spawnBossEntity() {
+      createEntity("Rogue Titan Boss", 0xd97706, 12, 5000, 0, -30);
+      alert("SPAWNED LEVEL 800 ROGUE TITAN BOSS IN THE CENTER!");
+    }
+
+    function triggerGameUpdate() {
+      alert("[GAME UPDATE v2.5 PUSHED]: Added SS5 Beast Forms, 20 Techniques, and Global Trading Server Refresh!");
+    }
+  </script>
+</body>
+</html>
